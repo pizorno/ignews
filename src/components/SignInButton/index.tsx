@@ -2,10 +2,10 @@ import { FaGithub } from 'react-icons/fa';
 import { FiX } from 'react-icons/fi';
 import { signIn, signOut, useSession } from 'next-auth/react';
 import styles from './styles.module.scss';
+import { Console } from 'console';
 
 export function SignInButton() {
   const { data: session } = useSession();
-
   console.log(session);
 
   return session ? (
