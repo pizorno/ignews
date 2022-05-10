@@ -21,7 +21,12 @@ export const config = {
   },
 };
 
-const relevantEvents = new Set(['checkout.session.completed']);
+const relevantEvents = new Set([
+  'checkout.session.completed',
+  'customer.subscriptions.created',
+  'customer.subscriptions.updated',
+  'customer.subscriptions.deleted',
+]);
 
 export default async (req: NextApiRequest, res: NextApiResponse) => {
   if (req.method === 'POST') {
@@ -44,23 +49,36 @@ export default async (req: NextApiRequest, res: NextApiResponse) => {
     if (relevantEvents.has(type)) {
       try {
         switch (type) {
+          case 'customer.subscriptions.created':
+          case 'customer.subscriptions.updated':
+          case 'customer.subscriptions.deleted':
+            const subscription = event.data.object as Stripe.Subscription;
+            await savesubscription(
+              subscription.id,
+              subscription.customer.toString(),
+              type === 'customer.subscriptions.created'
+            );
+            break;
           case 'checkout.session.completed':
-            const checkoutSession = event.data.object as Stripe.Checkout.Session
+            const checkoutSession = event.data
+              .object as Stripe.Checkout.Session;
             await savesubscription(
               checkoutSession.subscription.toString(),
-              checkoutSession.customer.toString()
-            )
-            break
+              checkoutSession.customer.toString(),
+              true
+            );
+            break;
           default:
-            throw new Error('Unhandled event')
+            throw new Error('Unhandled event');
         }
       } catch (err) {
-        return res.json({ error: 'Webhook handler error' })
+        return res.json({ error: 'Webhook handler error' });
       }
 
-    res.json({ ok: true });
-  } else {
-    res.setHeader('Allow', 'POST');
-    res.status(405).end('Method not allowed');
+      res.json({ ok: true });
+    } else {
+      res.setHeader('Allow', 'POST');
+      res.status(405).end('Method not allowed');
+    }
   }
 };
